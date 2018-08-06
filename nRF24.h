@@ -10,14 +10,53 @@ typedef enum { RF24_PA_MIN = 0,RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_PA_E
 typedef enum { RF24_1MBPS = 0, RF24_2MBPS, RF24_250KBPS }                              rf24_datarate_e;
 typedef enum { RF24_CRC_DISABLED = 0, RF24_CRC_8, RF24_CRC_16 }                        rf24_crclength_e;
 
+#define printf_P printf
+#define _BV(bit) (1 << (bit))
+#ifdef pgm_read_word
+#undef pgm_read_word
+#define pgm_read_word(p) (*(p)) 
+#endif
+
+#define NRF_DEBUG Serial
+
+#ifdef NRF_DEBUG
+#define printDebug(...) {                 \
+			NRF_DEBUG.print("[RF24] ");   \
+            NRF_DEBUG.print(__VA_ARGS__); \
+}                                         
+
+#define printlnDebug(...) {               \
+            printDebug(__VA_ARGS__);      \
+            NRF_DEBUG.println();          \
+}
+                                         
+#define printfDebug(...) {                \
+            printDebug("");               \
+            NRF_DEBUG.printf(__VA_ARGS__);\
+}
+                                         
+#else
+	#define printDebug(...)
+	#define printlnDebug(...)
+	#define printfDebug(...)
+#endif // !NRF_DEBUG
+
 class nRF24 {
 	
 	private:
 	
-		uint8_t pinCSN = 255;
-		uint8_t pinCE  = 255;
+		uint8_t pinCSN = 255;             /**< SPI Chip select */
+		uint8_t pinCE  = 255;             /**< "Chip Enable" pin, activates the RX or TX role */
+		uint8_t payload_size;             /**< Fixed size of payloads */
+		uint8_t addr_width;               /**< The address width to use - 3,4 or 5 bytes. */
+		uint8_t pipe0_reading_address[5]; /**< Last address set on pipe 0 for reading. */
+		bool    dynamic_payloads_enabled; /**< Whether dynamic payloads are enabled. */
+		bool    p_variant;                /* False for RF24L01 and true for RF24L01P */
 		
-		SPIClass _SPI = nullptr;
+		SPIClass* _SPI = nullptr;
+		
+		uint32_t txDelay;
+		uint32_t csDelay;
 		
 		void csn(bool mode);
 		void ce(bool level);
@@ -42,6 +81,8 @@ class nRF24 {
 		void toggle_features(void);
 		void errNotify(void);
 		
+		void beginTransaction();
+		void endTransaction();
 		uint8_t spiTrans(uint8_t cmd);
 	
 	public :
@@ -102,7 +143,7 @@ class nRF24 {
 		bool testCarrier(void);
 		bool testRPD(void) ;
 		
-		bool isValid() { return ce_pin != 0xff && csn_pin != 0xff; }
+		bool isValid() { return pinCE != 0xff && pinCSN != 0xff; }
 	
 		bool failureDetected; 
 		
@@ -132,8 +173,6 @@ class nRF24 {
   
 		bool isPVariant(void) ;
 		void maskIRQ(bool tx_ok,bool tx_fail,bool rx_ready);
-		uint32_t txDelay;
-		uint32_t csDelay;
-}
+};
 
 #endif // _NRF24_H_
