@@ -182,7 +182,7 @@ void nRF24::startListening(void) {
   if (pipe0_reading_address[0] > 0) {
     write_register(RX_ADDR_P0, pipe0_reading_address, addr_width);	
   } else {
-	closeReadingPipe(0);
+	//closeReadingPipe(0);
   }
   // Flush buffers
   //flush_rx();
@@ -465,7 +465,7 @@ bool nRF24::write( const void* buf, uint8_t len, const bool multicast ) {
 	//Wait until complete or failed
 	uint32_t timer = millis();
 	while( ! ( get_status()  & ( _BV(TX_DS) | _BV(MAX_RT) ))) { 
-		if(millis() - timer > 95) {
+		if(millis() - timer > 200) {
 			errNotify();
 			return 0;
 		}
